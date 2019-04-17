@@ -14,7 +14,7 @@
 namespace igl
 {
   // Compute distances from a set of points P to a triangle mesh (V,F)
-  //
+  // 
   // Inputs:
   //   P  #P by 3 list of query point positions
   //   V  #V by 3 list of vertex positions
