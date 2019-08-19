@@ -161,6 +161,24 @@ public:
           const Eigen::MatrixBase<Derivedq> & q,
           const bool first=false) const;
 
+      // Find the indices of all edges within epsilon of a given point: this
+      //
+      // Inputs:
+      //   V  #V by dim list of mesh vertex positions. **Should be same as used to
+      //     construct mesh.**
+      //   E  #E by 2 list of mesh indices into #V. **Should be same as used to
+      //     construct mesh.**
+      //   q  dim row-vector query position
+      //   first  whether to only return first element containing q
+      // Returns:
+      //   list of indices of elements containing q
+      template <typename DerivedEle, typename Derivedq>
+      IGL_INLINE std::vector<int> find_edges(
+          const Eigen::MatrixBase<DerivedV> & V,
+          const Eigen::MatrixBase<DerivedEle> & E, 
+          const Eigen::MatrixBase<Derivedq> & q,
+          Scalar epsilon) const;
+
       // If number of elements m then total tree size should be 2*h where h is
       // the deepest depth 2^ceil(log(#Ele*2-1))
       IGL_INLINE int subtree_size() const;
