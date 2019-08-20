@@ -13,6 +13,7 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <vector>
+#include <utility>
 namespace igl
 {
   // Implementation of semi-general purpose axis-aligned bounding box hierarchy.
@@ -171,9 +172,9 @@ public:
       //   q  dim row-vector query position
       //   first  whether to only return first element containing q
       // Returns:
-      //   list of indices of elements containing q
+      //   list of indices of elements containing q and their corresponding distance
       template <typename DerivedEle, typename Derivedq>
-      IGL_INLINE std::vector<int> find_edges(
+      IGL_INLINE std::vector<std::pair<int, double>> find_edges( // TODO Why can't I have Scalar as a return type in std::pair here?
           const Eigen::MatrixBase<DerivedV> & V,
           const Eigen::MatrixBase<DerivedEle> & E, 
           const Eigen::MatrixBase<Derivedq> & q,

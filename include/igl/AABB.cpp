@@ -295,7 +295,7 @@ IGL_INLINE std::vector<int> igl::AABB<DerivedV,DIM>::find(
 
 template <typename DerivedV, int DIM>
 template <typename DerivedEle, typename Derivedq>
-IGL_INLINE std::vector<int> igl::AABB<DerivedV,DIM>::find_edges(
+IGL_INLINE std::vector<std::pair<int, double>> igl::AABB<DerivedV,DIM>::find_edges(
     const Eigen::MatrixBase<DerivedV> & V,
     const Eigen::MatrixBase<DerivedEle> & E,
     const Eigen::MatrixBase<Derivedq> & q,
@@ -309,31 +309,14 @@ IGL_INLINE std::vector<int> igl::AABB<DerivedV,DIM>::find_edges(
       "AABB::find only makes sense for (d+1)-simplices");
 
   // Check if outside bounding box with epsilon buffer
-  bool inside = m_box.contains(AlignedBox3d(q.array() - epsilon, q.array() + epsilon));
+  bool inside = m_box.intersects(AlignedBox3d(q.array() - epsilon, q.array() + epsilon));
   if(!inside)
   {
-    return std::vector<int>();
+    return std::vector<std::pair<int, double>>();
   }
   assert(m_primitive==-1 || (m_left == NULL && m_right == NULL));
   if(is_leaf())
   {
-// public static
-//  double
-//  distanceToSegment( final R3 q, final R3 a, final R3 b )
-//  {
-//    final R3 ab  = b.sub( a ) ;
-//    final R3 aq  = q.sub( a ) ;
-
-//    if (aq.dot(ab) <= 0.0)           // Point is lagging behind start of the segment, so perpendicular distance is not qiable.
-//      return aq.modulus( ) ;         // Use distance to start of segment instead.
-
-//    final R3 bq  = q.sub( b ) ;
-
-//    if (bq.dot(ab) >= 0.0)           // Point is adqanced past the end of the segment, so perpendicular distance is not qiable.
-//      return bq.modulus( ) ;         // Use distance to end of the segment instead.
-
-//    return (ab.cross( aq )).modulus() / ab.modulus() ;       // Perpendicular distance of point to segment.
-// }
     Scalar dist = 0.0;
     RowVector3d a = V.row(E(m_primitive, 0));
     RowVector3d b = V.row(E(m_primitive, 1));
@@ -353,14 +336,14 @@ IGL_INLINE std::vector<int> igl::AABB<DerivedV,DIM>::find_edges(
 
     if(dist <= epsilon)
     {
-      return std::vector<int>(1,m_primitive);
+      return std::vector<std::pair<int, double>>(1,std::make_pair(m_primitive, dist));
     }else
     {
-      return std::vector<int>();
+      return std::vector<std::pair<int, double>>();
     }
   }
-  std::vector<int> left = m_left->find_edges(V,E,q,epsilon);
-  std::vector<int> right = m_right->find_edges(V,E,q,epsilon);
+  std::vector<std::pair<int, double>> left = m_left->find_edges(V,E,q,epsilon);
+  std::vector<std::pair<int, double>> right = m_right->find_edges(V,E,q,epsilon);
   left.insert(left.end(),right.begin(),right.end());
   return left;
 }
@@ -1150,7 +1133,8 @@ template void igl::AABB<Eigen::Matrix<double, -1, -1, 0, -1, -1>, 3>::squared_di
 template void igl::AABB<Eigen::Matrix<double, -1, -1, 0, -1, -1>, 2>::squared_distance<Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<double, -1, -1, 0, -1, -1> >(Eigen::MatrixBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> >&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> >&) const;
 template void igl::AABB<Eigen::Matrix<double, -1, -1, 0, -1, -1>, 3>::squared_distance<Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<double, -1, -1, 0, -1, -1> >(Eigen::MatrixBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> >&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> >&) const;
 template std::vector<int, std::allocator<int> > igl::AABB<Eigen::Matrix<double, -1, -1, 0, -1, -1>, 3>::find<Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Block<Eigen::Matrix<double, -1, -1, 0, -1, -1> const, 1, -1, false> >(Eigen::MatrixBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Block<Eigen::Matrix<double, -1, -1, 0, -1, -1> const, 1, -1, false> > const&, bool) const;
-template std::vector<int, std::allocator<int> > igl::AABB<Eigen::Matrix<double, -1, -1, 0, -1, -1>, 3>::find_edges<Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Block<Eigen::Matrix<double, -1, -1, 0, -1, -1>, 1, -1, false> >(Eigen::MatrixBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Block<Eigen::Matrix<double, -1, -1, 0, -1, -1>, 1, -1, false> > const&, double) const;
+template std::vector<std::pair<int, double>, std::allocator<std::pair<int, double> > > igl::AABB<Eigen::Matrix<double, -1, -1, 0, -1, -1>, 3>::find_edges<Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Block<Eigen::Matrix<double, -1, -1, 0, -1, -1>, 1, -1, false> >(Eigen::MatrixBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Block<Eigen::Matrix<double, -1, -1, 0, -1, -1>, 1, -1, false> > const&, double) const;
+template void igl::AABB<Eigen::Matrix<double, -1, -1, 0, -1, -1>, 2>::squared_distance<Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1> >(Eigen::MatrixBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, 1, 0, -1, 1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> >&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> >&) const;
 #ifdef WIN32
 template void igl::AABB<class Eigen::Matrix<double,-1,-1,0,-1,-1>,2>::squared_distance<class Eigen::Matrix<int,-1,-1,0,-1,-1>,class Eigen::Matrix<double,-1,-1,0,-1,-1>,class Eigen::Matrix<double,-1,1,0,-1,1>,class Eigen::Matrix<__int64,-1,1,0,-1,1>,class Eigen::Matrix<double,-1,3,0,-1,3> >(class Eigen::MatrixBase<class Eigen::Matrix<double,-1,-1,0,-1,-1> > const &,class Eigen::MatrixBase<class Eigen::Matrix<int,-1,-1,0,-1,-1> > const &,class Eigen::MatrixBase<class Eigen::Matrix<double,-1,-1,0,-1,-1> > const &,class Eigen::PlainObjectBase<class Eigen::Matrix<double,-1,1,0,-1,1> > &,class Eigen::PlainObjectBase<class Eigen::Matrix<__int64,-1,1,0,-1,1> > &,class Eigen::PlainObjectBase<class Eigen::Matrix<double,-1,3,0,-1,3> > &)const;
 template void igl::AABB<class Eigen::Matrix<double,-1,-1,0,-1,-1>,3>::squared_distance<class Eigen::Matrix<int,-1,-1,0,-1,-1>,class Eigen::Matrix<double,-1,-1,0,-1,-1>,class Eigen::Matrix<double,-1,1,0,-1,1>,class Eigen::Matrix<__int64,-1,1,0,-1,1>,class Eigen::Matrix<double,-1,3,0,-1,3> >(class Eigen::MatrixBase<class Eigen::Matrix<double,-1,-1,0,-1,-1> > const &,class Eigen::MatrixBase<class Eigen::Matrix<int,-1,-1,0,-1,-1> > const &,class Eigen::MatrixBase<class Eigen::Matrix<double,-1,-1,0,-1,-1> > const &,class Eigen::PlainObjectBase<class Eigen::Matrix<double,-1,1,0,-1,1> > &,class Eigen::PlainObjectBase<class Eigen::Matrix<__int64,-1,1,0,-1,1> > &,class Eigen::PlainObjectBase<class Eigen::Matrix<double,-1,3,0,-1,3> > &)const;
