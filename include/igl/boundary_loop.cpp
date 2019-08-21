@@ -5,12 +5,16 @@
 // This Source Code Form is subject to the terms of the Mozilla Public License
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
+#include "adjacency_list.h"
 #include "boundary_loop.h"
+#include "oriented_facets.h"
 #include "slice.h"
 #include "triangle_triangle_adjacency.h"
 #include "vertex_triangle_adjacency.h"
 #include "is_border_vertex.h"
+#include <map>
 #include <set>
+#include <utility>
 
 template <typename DerivedF, typename Index>
 IGL_INLINE void igl::boundary_loop(
@@ -28,6 +32,24 @@ IGL_INLINE void igl::boundary_loop(
   vector<std::vector<int> > VF, VFi;
   triangle_triangle_adjacency(F,TT,TTi);
   vertex_triangle_adjacency(Vdummy,F,VF,VFi);
+
+  vector<vector<int>> A;
+  igl::adjacency_list(F, A);
+  MatrixXi E;
+  igl::oriented_facets(F, E);
+  // Count edges
+  map<pair<int,int>,int> edge_repeats;
+  auto unordered_make_pair = [](auto a, auto b){ return a < b ? make_pair(a,b) : make_pair(b, a);};
+  for (int i = 0; i < E.rows(); i++)
+  {
+    auto key = unordered_make_pair(E(i, 0), E(i,1));
+    if(edge_repeats.count(key) == 0) {
+      edge_repeats[key] = 1;
+    } else {
+      edge_repeats[key]++;
+    }
+  }
+  
 
   vector<bool> unvisited = is_border_vertex(Vdummy,F);
   set<int> unseen;
@@ -54,27 +76,38 @@ IGL_INLINE void igl::boundary_loop(
       bool newBndEdge = false;
       int v = l[l.size()-1];
       int next;
-      for (int i = 0; i < (int)VF[v].size() && !newBndEdge; i++)
+      
+      for (int i = 0; i < A[v].size(); i++)
       {
-        int fid = VF[v][i];
-
-        if (TT.row(fid).minCoeff() < 0.) // Face contains boundary edge
-        {
-          int vLoc = -1;
-          if (F(fid,0) == v) vLoc = 0;
-          if (F(fid,1) == v) vLoc = 1;
-          if (F(fid,2) == v) vLoc = 2;
-
-          int vNext = F(fid,(vLoc + 1) % F.cols());
-
-          newBndEdge = false;
-          if (unvisited[vNext] && TT(fid,vLoc) < 0)
-          {
-            next = vNext;
-            newBndEdge = true;
-          }
+        // Only consider traversing edges that are on boundary by looking at half-edge count
+        if(unvisited[A[v][i]] && edge_repeats[unordered_make_pair(v, A[v][i])] == 1) {
+          next = A[v][i];
+          newBndEdge = true;
+          break; // Assuming only one incident border vertex
         }
       }
+      
+      // for (int i = 0; i < (int)VF[v].size() && !newBndEdge; i++)
+      // {
+      //   int fid = VF[v][i];
+
+      //   if (TT.row(fid).minCoeff() < 0.) // Face contains boundary edge
+      //   {
+      //     int vLoc = -1;
+      //     if (F(fid,0) == v) vLoc = 0;
+      //     if (F(fid,1) == v) vLoc = 1;
+      //     if (F(fid,2) == v) vLoc = 2;
+
+      //     int vNext = F(fid,(vLoc + 1) % F.cols());
+
+      //     newBndEdge = false;
+      //     if (unvisited[vNext] && TT(fid,vLoc) < 0)
+      //     {
+      //       next = vNext;
+      //       newBndEdge = true;
+      //     }
+      //   }
+      // }
 
       if (newBndEdge)
       {
