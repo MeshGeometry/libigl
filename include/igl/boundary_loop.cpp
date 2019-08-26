@@ -16,6 +16,8 @@
 #include <set>
 #include <utility>
 
+#include <iostream>
+
 template <typename DerivedF, typename Index>
 IGL_INLINE void igl::boundary_loop(
     const Eigen::MatrixBase<DerivedF> & F,
@@ -58,6 +60,71 @@ IGL_INLINE void igl::boundary_loop(
     if (unvisited[i])
       unseen.insert(unseen.end(),i);
   }
+  
+
+  // Stack based approach
+
+  while (!unseen.empty())
+  {
+    vector<vector<int>> all_paths; // We will take the longest path. This could explode memory we'll see..
+    vector<int> path;
+    int start = *unseen.begin();
+    path.push_back(start);
+    unseen.erase(unseen.begin());
+    unvisited[start] = false;
+
+    bool finished_loop = false;
+    while(true) {
+      int v = path.back();
+      // if(v == (9528) || v == (9527) || v == (32212) || v == 32213 ) {
+      //     std::cout << "cur v: " << v << '\n';
+      // }
+      //find next
+      int next = -1;
+      for (int i = 0; i < A[v].size(); i++)
+      {
+        // if(v == (9528) || v == (9527) || v == (32212) || v == 32213 ) {
+        //   std::cout << "A[v][" << i << "]: " << A[v][i] << '\n';
+        // }
+        // Only consider traversing edges that are on boundary by looking at half-edge count
+        if(unvisited[A[v][i]] && edge_repeats[unordered_make_pair(v, A[v][i])] == 1) {
+          // if(v == (9528) || v == (9527) || v == (32212) || v == 32213 ) {
+          //   std::cout << "found next: " << A[v][i] << '\n';
+          // }
+          next = A[v][i];
+          break;
+        } else {
+          // if(v == (9528) || v == (9527) || v == (32212) || v == 32213 ) {
+          //   std::cout << "unvisited[A[v][i]]: " << unvisited[A[v][i]] <<  ", edge_repeats[unordered_make_pair(v, A[v][i])]: " << edge_repeats[unordered_make_pair(v, A[v][i])] << '\n';
+          // }
+        }
+      }
+
+      if(next == start) { // Found a loop
+        break;
+      } else if(next != -1) { // Keep following path
+        path.push_back(next);
+        unvisited[next] = false;
+        unseen.erase(next);
+      } else { // Back up
+        // if(v == (9528) || v == (9527) || v == (32212) || v == 32213 ) {
+        //   std::cout << "popping" << '\n';
+        // }
+        all_paths.push_back(path);
+        if(path.size() == 1) {
+          break;
+        } else {
+          path.pop_back();
+        }
+      }
+    }
+    auto& longest_path = *std::max_element(all_paths.begin(), all_paths.end(), [](auto& a, auto& b){return a.size() < b.size();});
+    // for(auto& p : longest_path) {
+    //   std::cout << p << ", ";
+    // }
+    //   std::cout << "\n";
+    L.push_back(longest_path);
+  }
 
   while (!unseen.empty())
   {
@@ -77,16 +144,18 @@ IGL_INLINE void igl::boundary_loop(
       int v = l[l.size()-1];
       int next;
       
-      for (int i = 0; i < A[v].size(); i++)
-      {
-        // Only consider traversing edges that are on boundary by looking at half-edge count
-        if(unvisited[A[v][i]] && edge_repeats[unordered_make_pair(v, A[v][i])] == 1) {
-          next = A[v][i];
-          newBndEdge = true;
-          break; // Assuming only one incident border vertex
-        }
-      }
+      // My Way
+      // for (int i = 0; i < A[v].size(); i++)
+      // {
+      //   // Only consider traversing edges that are on boundary by looking at half-edge count
+      //   if(unvisited[A[v][i]] && edge_repeats[unordered_make_pair(v, A[v][i])] == 1) {
+      //     next = A[v][i];
+      //     newBndEdge = true;
+      //     break; // Assuming only one incident border vertex
+      //   }
+      // }
       
+      // Old way
       // for (int i = 0; i < (int)VF[v].size() && !newBndEdge; i++)
       // {
       //   int fid = VF[v][i];
