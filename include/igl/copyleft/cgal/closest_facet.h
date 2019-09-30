@@ -25,6 +25,8 @@ namespace igl
   {
     namespace cgal
     {
+      enum ElementType { VERTEX, EDGE, FACE };
+      static std::vector<ElementType> type_dummy;
       // Determine the closest facet for each of the input points.
       //
       // Inputs:
@@ -54,7 +56,8 @@ namespace igl
         const std::vector<std::vector<uE2EType> >& uE2E,
         const Eigen::PlainObjectBase<DerivedEMAP>& EMAP,
               Eigen::PlainObjectBase<DerivedR>& R,
-              Eigen::PlainObjectBase<DerivedS>& S);
+              Eigen::PlainObjectBase<DerivedS>& S,
+              std::vector<ElementType>& type=type_dummy);
       template<
         typename DerivedV,
         typename DerivedF,
@@ -70,7 +73,8 @@ namespace igl
         const std::vector<std::vector<uE2EType> >& uE2E,
         const Eigen::PlainObjectBase<DerivedEMAP>& EMAP,
         Eigen::PlainObjectBase<DerivedR>& R,
-        Eigen::PlainObjectBase<DerivedS>& S);
+        Eigen::PlainObjectBase<DerivedS>& S,
+        std::vector<ElementType>& type=type_dummy);
       template<
         typename DerivedV,
         typename DerivedF,
@@ -99,7 +103,8 @@ namespace igl
           const std::vector<typename Kernel::Triangle_3 > & triangles,
           const std::vector<bool> & in_I,
           Eigen::PlainObjectBase<DerivedR>& R,
-          Eigen::PlainObjectBase<DerivedS>& S);
+          Eigen::PlainObjectBase<DerivedS>& S,
+          std::vector<ElementType>& type=type_dummy);
     }
   }
 }

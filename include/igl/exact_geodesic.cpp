@@ -567,6 +567,12 @@ public:
 		add(f->adjacent_vertices()[2]);
 		multiply(1./3.);
 	};
+	
+	SurfacePoint(face_pointer f, double x, double y, double z):		//set the surface point in the center of the face
+		m_p(f)
+	{
+		set(x,y,z);
+	};
 
 	SurfacePoint(edge_pointer e,		//set the surface point in the middle of the edge
 				 double a = 0.5):
@@ -580,6 +586,12 @@ public:
 		x() = b*v0->x() + a*v1->x();
 		y() = b*v0->y() + a*v1->y();
 		z() = b*v0->z() + a*v1->z();
+	};
+	SurfacePoint(edge_pointer e,		//set the surface point in the middle of the edge
+				 double x, double y, double z):
+		m_p(e)
+	{
+		set(x,y,z);
 	};
 
 	SurfacePoint(base_pointer g,
@@ -1027,7 +1039,7 @@ inline void Mesh::build_adjacencies()
 
 inline bool Mesh::verify()		//verifies connectivity of the mesh and prints some debug info
 {
-	std::cout << std::endl;
+	// std::cout << std::endl;
 	// make sure that all vertices are mentioned at least once.
 	// though the loose vertex is not a bug, it most likely indicates that something is wrong with the mesh
 	std::vector<bool> map(m_vertices.size(), false);
@@ -3219,7 +3231,108 @@ IGL_INLINE void igl::exact_geodesic(
   }
 }
 
+template <
+    typename DerivedV,
+    typename DerivedF,
+    typename DerivedPS,
+    typename DerivedPT,
+    typename DerivedP>
+    IGL_INLINE void igl::exact_geodesic_path(
+      const Eigen::MatrixBase<DerivedV> &V,
+      const Eigen::MatrixBase<DerivedF> &F,
+      const Eigen::MatrixBase<DerivedPS> &PS,
+      const igl::PointType Stype,
+      const Eigen::MatrixBase<DerivedPT> &PT,
+      const igl::PointType Ttype,
+      Eigen::PlainObjectBase<DerivedP> &P,
+			std::vector<igl::PointType> &Ptypes)
+	{
+		// assert(V.cols() == 3 && F.cols() == 3 && "Only support 3D triangle mesh");
+		// assert(VS.cols() <=1 && FS.cols() <= 1 && VT.cols() <= 1 && FT.cols() <=1 && "Only support one dimensional inputs");
+		std::vector<typename DerivedV::Scalar> points(V.rows() * V.cols());
+		std::vector<typename DerivedF::Scalar> faces(F.rows() * F.cols());
+		for (int i = 0; i < points.size(); i++)
+		{
+			points[i] = V(i / 3, i % 3);
+		}
+		for (int i = 0; i < faces.size(); i++)
+		{
+			faces[i] = F(i / 3, i % 3);
+		}
+
+		igl::geodesic::Mesh mesh;
+		mesh.initialize_mesh_data(points, faces);
+		igl::geodesic::GeodesicAlgorithmExact exact_algorithm(&mesh);
+
+		std::vector<igl::geodesic::SurfacePoint> source(1);
+		struct ConstructSource {
+			ConstructSource(
+				igl::geodesic::Mesh& mesh,
+				igl::geodesic::SurfacePoint& source,
+				const Eigen::MatrixBase<DerivedPS>& PS
+				) : m_source(source), m_mesh(mesh), m_PS(PS){};
+			igl::geodesic::SurfacePoint& m_source;
+			igl::geodesic::Mesh& m_mesh;
+			const Eigen::MatrixBase<DerivedPS>& m_PS;
+
+			void operator()(const igl::VertexPoint& vp) {
+				// std::cout << "VERTEX\n";
+				m_source = igl::geodesic::SurfacePoint(&m_mesh.vertices()[vp.vi]);
+			}
+			void operator()(const igl::FacePoint& fp) {
+				// std::cout << "FACE\n";
+				m_source = igl::geodesic::SurfacePoint(&m_mesh.faces()[fp.fi], m_PS(0), m_PS(1), m_PS(2));
+			}
+			void operator()(const igl::EdgePoint& ep) {
+				// std::cout << "EDGE\n";
+				auto& adj_e = m_mesh.vertices()[ep.e0].adjacent_edges();
+				for(int i = 0; i < adj_e.size(); i++) {
+					if(adj_e[i]->belongs(&m_mesh.vertices()[ep.e1])) {
+						m_source = igl::geodesic::SurfacePoint(adj_e[i], m_PS(0), m_PS(1), m_PS(2));
+					}
+				}
+				m_mesh.edges();
+			}
+		};
+		
+		std::visit(ConstructSource(mesh, source[0], PS), Stype);
+		std::vector<igl::geodesic::SurfacePoint> target(1);
+		std::visit(ConstructSource(mesh, target[0], PT), Ttype);
+
+		double stop_dist = source[0].distance(&target[0]) * 2.0;
+		exact_algorithm.propagate(source, stop_dist);//, &target);
+		std::vector<igl::geodesic::SurfacePoint> path;
+		exact_algorithm.trace_back(target[0], path);
+
+		P.resize(path.size(), 3);
+		Ptypes.resize(path.size());
+		for(int i = 0; i < P.rows(); i++) {
+			P(i, 0) = path[i].x();
+			P(i, 1) = path[i].y();
+			P(i, 2) = path[i].z();
+			switch (path[i].type())
+			{
+			case igl::geodesic::VERTEX:
+				Ptypes[i] = igl::VertexPoint{(int)path[i].base_element()->id()};
+				break;
+			case igl::geodesic::FACE:
+				Ptypes[i] = igl::FacePoint{(int)path[i].base_element()->id()};
+				break;
+			case igl::geodesic::EDGE:
+				Ptypes[i] = igl::EdgePoint{
+					(int)((igl::geodesic::edge_pointer) path[i].base_element())->v0()->id(),
+				  (int)((igl::geodesic::edge_pointer) path[i].base_element())->v1()->id()
+				};
+				break;
+			
+			default:
+				break;
+			}
+		}
+	}
+
 #ifdef IGL_STATIC_LIBRARY
 template void igl::exact_geodesic<Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<double, -1, 1, 0, -1, 1>>(Eigen::MatrixBase<Eigen::Matrix<double, -1, -1, 0, -1, -1>> const &, Eigen::MatrixBase<Eigen::Matrix<int, -1, -1, 0, -1, -1>> const &, Eigen::MatrixBase<Eigen::Matrix<int, -1, 1, 0, -1, 1>> const &, Eigen::MatrixBase<Eigen::Matrix<int, -1, 1, 0, -1, 1>> const &, Eigen::MatrixBase<Eigen::Matrix<int, -1, 1, 0, -1, 1>> const &, Eigen::MatrixBase<Eigen::Matrix<int, -1, 1, 0, -1, 1>> const &, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, 1, 0, -1, 1>> &);
 template void igl::exact_geodesic<Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1> >(Eigen::MatrixBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> >&);
+template void igl::exact_geodesic_path<Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Block<Eigen::Matrix<double, -1, -1, 0, -1, -1>, 1, -1, false>, Eigen::Block<Eigen::Matrix<double, -1, -1, 0, -1, -1>, 1, -1, false>, Eigen::Matrix<double, -1, -1, 0, -1, -1> >(Eigen::MatrixBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::MatrixBase<Eigen::Block<Eigen::Matrix<double, -1, -1, 0, -1, -1>, 1, -1, false> > const&, std::__1::variant<igl::VertexPoint, igl::FacePoint, igl::EdgePoint>, Eigen::MatrixBase<Eigen::Block<Eigen::Matrix<double, -1, -1, 0, -1, -1>, 1, -1, false> > const&, std::__1::variant<igl::VertexPoint, igl::FacePoint, igl::EdgePoint>, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> >&, std::vector<igl::PointType> &);
 #endif
