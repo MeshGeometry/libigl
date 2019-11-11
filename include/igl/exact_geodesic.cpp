@@ -3209,14 +3209,18 @@ IGL_INLINE void igl::exact_geodesic(
     target[i] = (igl::geodesic::SurfacePoint(&mesh.faces()[FT(i, 0)]));
   }
 
+	// std::cout << "propogate" << std::endl;
   exact_algorithm.propagate(source);
   std::vector<igl::geodesic::SurfacePoint> path;
+	// std::cout << "trace" << std::endl;
   D.resize(target.size(), 1);
   for (int i = 0; i < target.size(); i++)
   {
-    exact_algorithm.trace_back(target[i], path);
-    D(i) = igl::geodesic::length(path);
+		exact_algorithm.best_source(target[i], D(i));
+    // exact_algorithm.trace_back(target[i], path);
+    // D(i) = igl::geodesic::length(path);
   }
+	// std::cout << "done" << std::endl;
 }
 
 #ifdef IGL_STATIC_LIBRARY
