@@ -120,48 +120,33 @@ IGL_INLINE void igl::heat_geodesics_solve(
     igl::min_quad_with_fixed_solve(
       data.Dirichlet,u0,DerivedD::Zero(data.b.size()).eval(),DerivedD(),uD);
     u += uD;
-    // u *= 0.5;
+    u *= 0.5;
   }
-  std::cout << u << std::endl;
   DerivedD grad_u = data.Grad*u;
   const int m = data.Grad.rows()/data.ng;
   for(int i = 0;i<m;i++)
   {
-    // norm_g = sqrt(sum(g.^2,2)) . It is very important to divide out the coordinate with the maximum absolute value:
-    // `norm_g = max(abs(g)) * sqrt(sum (g/max(abs(g))) `.
-    //m = max(abs([a;b]))
-    // m = max(abs([a;b]))
-    // c3 = m.*sqrt((a./m).^2 + (b./m).^2)
+    // It is very important to use a stable norm calculation here. If the
+    // triangle is far from a source, then the floating point values in the
+    // gradient can be _very_ small (e.g., 1e-300). The standard/naive norm
+    // calculation will suffer from underflow. Dividing by the max value is more
+    // stable. (Eigen implements this as stableNorm or blueNorm).
     Scalar norm = 0;
-    Scalar max_abs = 0;
-    Eigen::Matrix<Scalar, -1, 1> grad;
-    Eigen::VectorXd my_grad(data.ng);
+    Scalar ma = 0;
+    for(int d = 0;d<data.ng;d++) {ma = std::max(ma,std::fabs(grad_u(d*m+i)));}
     for(int d = 0;d<data.ng;d++)
     {
-      max_abs = std::max(max_abs, std::abs(grad_u(d*m+i)));
+      const Scalar gui = grad_u(d*m+i) / ma;
+      norm += gui*gui;
     }
-    // std::cout << "max abs "  << max_abs << '\n';
-    for(int d = 0;d<data.ng;d++)
-    {
-      my_grad(d) = grad_u(d*m+i);
-      // Scalar g = grad_u(d*m+i) / max_abs;
-      // Scalar g = grad_u(d*m+i);
-      // norm += g*g;
-    }
-    // norm = max_abs * sqrt(norm);
-    // norm = sqrt(norm);
-
-    norm = my_grad.stableNorm();
-    my_grad.stableNormalize();
-    // norm = my_grad.norm();
-    // my_grad.normalize();
-    // std::cout << "norm "  << norm << '\n';
-    if(norm == 0)
+    norm = ma*sqrt(norm);
+    // These are probably over kill; ma==0 should be enough
+    if(ma == 0 || norm == 0 || norm!=norm)
     {
       for(int d = 0;d<data.ng;d++) { grad_u(d*m+i) = 0; }
     }else
     {
-      for(int d = 0;d<data.ng;d++) { grad_u(d*m+i) = my_grad(d); }
+      for(int d = 0;d<data.ng;d++) { grad_u(d*m+i) /= norm; }
     }
   }
   const DerivedD div_X = -data.Div*grad_u;
