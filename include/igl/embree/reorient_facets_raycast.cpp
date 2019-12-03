@@ -229,9 +229,9 @@ IGL_INLINE void igl::embree::reorient_facets_raycast(
   Eigen::PlainObjectBase<DerivedFF> & FF,
   Eigen::PlainObjectBase<DerivedI> & I)
 {
-  const int rays_total = F.rows()*100;
+  const int rays_total = F.rows()*200;
   const int rays_minimum = 10;
-  const bool facet_wise = false;
+  const bool facet_wise = true;
   const bool use_parity = false;
   const bool is_verbose = false;
   Eigen::VectorXi C;
