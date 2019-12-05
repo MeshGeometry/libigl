@@ -94,15 +94,15 @@ namespace igl
 
     IGL_INLINE bool operator==(HalfEdgeIterator& p2);
 
-  private:
+  public:
     int fi;
     int ei;
     bool reverse;
 
     // All the same type? This is likely to break.
-    const Eigen::PlainObjectBase<DerivedF> & F;
-    const Eigen::PlainObjectBase<DerivedFF> & FF;
-    const Eigen::PlainObjectBase<DerivedFFi> & FFi;
+    Eigen::PlainObjectBase<DerivedF> F;
+    Eigen::PlainObjectBase<DerivedFF> FF;
+    Eigen::PlainObjectBase<DerivedFFi> FFi;
   };
 
 }

@@ -18,16 +18,26 @@ IGL_INLINE igl::HalfEdgeIterator<DerivedF,DerivedFF,DerivedFFi>::HalfEdgeIterato
     bool _reverse
 )
 : fi(_fi), ei(_ei), reverse(_reverse), F(_F), FF(_FF), FFi(_FFi)
-{}
+{
+  // std::cout << "new iterator" << std::endl;
+    // std::cout << "FF.rows(): " << FF.rows() << std::endl;
+  // std::cout << "FF.cols(): " << FF.cols() << std::endl;
+}
 
 template <typename DerivedF, typename DerivedFF, typename DerivedFFi>
 IGL_INLINE void igl::HalfEdgeIterator<DerivedF,DerivedFF,DerivedFFi>::flipF()
 {
+  // std::cout << "0" << std::endl;
+  // std::cout << "FF.rows(): " << FF.rows() << std::endl;
+  // std::cout << "FF.cols(): " << FF.cols() << std::endl;
   if (isBorder())
     return;
 
+  // std::cout << "a" << std::endl;
   int fin = (FF)(fi,ei);
+  // std::cout << "b" << std::endl;
   int ein = (FFi)(fi,ei);
+  // std::cout << "c" << std::endl;
 
   fi = fin;
   ei = ein;
@@ -57,6 +67,10 @@ IGL_INLINE void igl::HalfEdgeIterator<DerivedF,DerivedFF,DerivedFFi>::flipV()
 template <typename DerivedF, typename DerivedFF, typename DerivedFFi>
 IGL_INLINE bool igl::HalfEdgeIterator<DerivedF,DerivedFF,DerivedFFi>::isBorder()
 {
+  // std::cout << "fi: " << fi << std::endl;
+  // std::cout << "ei: " << ei << std::endl;
+  // std::cout << "FF.rows(): " << FF.rows() << std::endl;
+  // std::cout << "FF.cols(): " << FF.cols() << std::endl;
   return (FF)(fi,ei) == -1;
 }
 
