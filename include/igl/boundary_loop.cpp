@@ -30,7 +30,7 @@ IGL_INLINE void igl::boundary_loop(
     return;
 
   VectorXd Vdummy(F.maxCoeff()+1,1);
-  DerivedF TT,TTi;
+  Eigen::Matrix<typename DerivedF::Scalar, Eigen::Dynamic, Eigen::Dynamic> TT,TTi;
   vector<std::vector<int> > VF, VFi;
   triangle_triangle_adjacency(F,TT,TTi);
   vertex_triangle_adjacency(Vdummy,F,VF,VFi);
@@ -51,16 +51,15 @@ IGL_INLINE void igl::boundary_loop(
       edge_repeats[key]++;
     }
   }
-  
 
-  vector<bool> unvisited = is_border_vertex(Vdummy,F);
+  vector<bool> unvisited = is_border_vertex(F);
   set<int> unseen;
   for (size_t i = 0; i < unvisited.size(); ++i)
   {
     if (unvisited[i])
       unseen.insert(unseen.end(),i);
   }
-  
+
 
   // Stack based approach
 
@@ -143,7 +142,7 @@ IGL_INLINE void igl::boundary_loop(
       bool newBndEdge = false;
       int v = l[l.size()-1];
       int next;
-      
+
       // My Way
       // for (int i = 0; i < A[v].size(); i++)
       // {
@@ -154,7 +153,7 @@ IGL_INLINE void igl::boundary_loop(
       //     break; // Assuming only one incident border vertex
       //   }
       // }
-      
+
       // Old way
       // for (int i = 0; i < (int)VF[v].size() && !newBndEdge; i++)
       // {
@@ -244,7 +243,7 @@ IGL_INLINE void igl::boundary_loop(
   vector<int> Lvec;
   boundary_loop(F,Lvec);
 
-  L.resize(Lvec.size());
+  L.resize(Lvec.size(), 1);
   for (size_t i = 0; i < Lvec.size(); ++i)
     L(i) = Lvec[i];
 }
